@@ -36,6 +36,8 @@
 (require 'ob-eval)
 (eval-when-compile (require 'cl))
 
+(declare-function scala-run-scala "ext:scala-mode" (cmd))
+
 (defvar org-babel-tangle-lang-exts) ;; Autoloaded
 (add-to-list 'org-babel-tangle-lang-exts '("scala" . "scala"))
 (defvar org-babel-default-header-args:scala '())
@@ -113,12 +115,19 @@ in BODY as elisp."
 
 (defun org-babel-prep-session:scala (session params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
-  (error "Sessions are not (yet) supported for Scala"))
+  (let* ((session (org-babel-scala-initiate-session session))
+         (var-lines (org-babel-variable-assignments:scala params)))
+    (org-babel-comint-in-buffer session
+      (sit-for .5) (goto-char (point-max))
+      (mapc (lambda (var)
+              (insert var) (comint-send-input nil t)
+              (org-babel-comint-wait-for-output session)
+              (sit-for .1) (goto-char (point-max))) var-lines))
+    session))
 
 (defun org-babel-scala-initiate-session (&optional session)
   "If there is not a current inferior-process-buffer in SESSION
-then create.  Return the initialized session.  Sessions are not
-supported in Scala."
+then create.  Return the initialized session."
   nil)
 
 (provide 'ob-scala)
